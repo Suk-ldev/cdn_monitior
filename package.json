@@ -1,0 +1,23 @@
+{
+  "name": "cloudflare-monitor-serverless",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cloudflare Analytics Serverless Monitor for EdgeOne Pages",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo \"No build needed\""
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
+    "tencentcloud-sdk-nodejs": "^4.0.924",
+    "tencentcloud-sdk-nodejs-teo": "^4.1.172"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18"
+  }
+}

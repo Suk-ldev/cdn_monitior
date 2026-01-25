@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  cloudflare-monitor:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - CF_TOKENS=${CF_TOKENS}
+      - CF_ZONES=${CF_ZONES}
+      - CF_DOMAINS=${CF_DOMAINS}
+      - CF_ACCOUNT_NAME=${CF_ACCOUNT_NAME}
+      - SITE_NAME=${SITE_NAME}
+      - SITE_ICON=${SITE_ICON}
+    restart: unless-stopped
