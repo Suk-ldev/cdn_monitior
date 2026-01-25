@@ -1,7 +1,7 @@
-import axios from 'axios';
-import 'dotenv/config';
-import { teo } from "tencentcloud-sdk-nodejs-teo";
-import { CommonClient } from "tencentcloud-sdk-nodejs-common";
+const axios = require('axios');
+require('dotenv/config');
+const { teo } = require("tencentcloud-sdk-nodejs-teo");
+const { CommonClient } = require("tencentcloud-sdk-nodejs-common");
 
 const CF_API_URL = 'https://api.cloudflare.com/client/v4/graphql';
 
@@ -1140,4 +1140,4 @@ async function handleRequest(event) {
   });
 }
 
-export default handleRequest;
+module.exports = handleRequest;
