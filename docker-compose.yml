@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  cloudflare-monitor:
+  cdn-monitor:
     build: .
     ports:
       - "3000:3000"
@@ -9,7 +9,10 @@ services:
       - CF_TOKENS=${CF_TOKENS}
       - CF_ZONES=${CF_ZONES}
       - CF_DOMAINS=${CF_DOMAINS}
-      - CF_ACCOUNT_NAME=${CF_ACCOUNT_NAME}
+      - EO_SECRET_ID=${EO_SECRET_ID}
+      - EO_SECRET_KEY=${EO_SECRET_KEY}
       - SITE_NAME=${SITE_NAME}
       - SITE_ICON=${SITE_ICON}
+      - EO_ICON=${EO_ICON}
+      - DEBUG=${DEBUG}
     restart: unless-stopped

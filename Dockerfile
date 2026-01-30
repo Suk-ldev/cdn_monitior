@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "node-functions/api/[[default]].js"]
+CMD ["node", "server.js"]

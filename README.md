@@ -1,10 +1,10 @@
 # CDN 流量分析看板
 
-一个支持 Cloudflare 和 EdgeOne 的 CDN 流量分析看板，采用无服务器架构，可部署在 Vercel 或其他平台。
+一个支持 Cloudflare 和 EdgeOne 的 CDN 流量分析看板，采用 Node.js + Express 架构，可通过 Docker 部署。
 
 ## 功能特性
 
-- 无服务器架构 - 无需后端服务器
+- Node.js + Express 架构
 - 支持 Cloudflare 和 EdgeOne 双平台
 - 实时 CDN 流量数据展示
 - 多语言支持（中文/英文）
@@ -32,7 +32,7 @@ npm install
 
 ### 3. 配置环境变量
 
-本项目使用环境变量存储敏感信息，如 API 密钥。请在部署平台的控制台中设置以下环境变量：
+本项目使用环境变量存储敏感信息，如 API 密钥。请创建一个 `.env` 文件，参考 `.env.example` 的格式，填入你的 API 凭证：
 
 #### Cloudflare 配置
 
@@ -51,10 +51,6 @@ npm install
 - `SITE_ICON`：Cloudflare 图标 URL（可选）
 - `EO_ICON`：EdgeOne 图标 URL（可选）
 - `DEBUG`：调试模式，设置为 `true` 启用（可选）
-
-### 本地开发
-
-如果你需要在本地开发，可以创建一个 `.env` 文件，参考 `.env.example` 的格式，填入你的 API 凭证。但请注意，不要将 `.env` 文件提交到版本控制系统中。
 
 ### 4. 获取 Cloudflare API Token
 
@@ -82,104 +78,89 @@ npm install
 启动开发服务器：
 
 ```bash
-npm run dev
+npm start
 ```
 
 在浏览器中打开 `http://localhost:3000`。
 
 ## 部署教程
 
-### 方法一：部署到 Vercel
+### 方法一：使用 Docker 部署
 
-#### 1. 准备工作
+#### 1. 构建 Docker 镜像
 
-确保你已经：
-- 将代码推送到 GitHub 仓库
-- 拥有 Vercel 账号
+在项目根目录执行：
 
-#### 2. 导入项目到 Vercel
-
-1. 访问 [Vercel Dashboard](https://vercel.com/dashboard)
-2. 点击 "Add New Project"
-3. 从 GitHub 导入你的仓库
-4. Vercel 会自动检测项目配置
-
-#### 3. 配置环境变量
-
-在 Vercel 项目设置中添加以下环境变量：
-
-**Cloudflare 配置（可选，仅使用 Cloudflare 时需要）：**
-```
-CF_TOKENS=your_cloudflare_api_token_here
-CF_ZONES=your_zone_id_here
-CF_DOMAINS=example.com
+```bash
+docker build -t cdn-monitor .
 ```
 
-**EdgeOne 配置（可选，仅使用 EdgeOne 时需要）：**
+#### 2. 运行 Docker 容器
+
+```bash
+docker run -d \
+  --name cdn-monitor \
+  -p 3000:3000 \
+  -e CF_TOKENS=your_cloudflare_api_token_here \
+  -e CF_ZONES=your_zone_id_here \
+  -e CF_DOMAINS=example.com \
+  -e EO_SECRET_ID=your_edgeone_secret_id_here \
+  -e EO_SECRET_KEY=your_edgeone_secret_key_here \
+  -e SITE_NAME=CDN站点流量分析 \
+  cdn-monitor
 ```
-EO_SECRET_ID=your_edgeone_secret_id_here
-EO_SECRET_KEY=your_edgeone_secret_key_here
+
+#### 3. 使用 Docker Compose（推荐）
+
+项目已经包含了 `docker-compose.yml` 文件，你可以直接使用：
+
+1. 修改 `docker-compose.yml` 文件，添加你的环境变量
+2. 运行：
+
+```bash
+docker-compose up -d
 ```
 
-**通用配置（可选）：**
+### 方法二：自托管部署
+
+1. 在服务器上安装 Node.js 18 或更高版本
+2. 克隆项目到服务器
+3. 安装依赖：`npm install --production`
+4. 配置环境变量
+5. 启动服务器：`npm start`
+
+### 方法三：使用 Nginx 作为反向代理（可选）
+
+如果你需要使用域名访问，可以配置 Nginx 作为反向代理：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
 ```
-SITE_NAME=CDN站点流量分析
-SITE_ICON=https://cloudflare.com/favicon.ico
-EO_ICON=https://cloud.tencent.com/favicon.ico
-DEBUG=false
-```
-
-#### 4. 部署
-
-点击 "Deploy" 按钮，Vercel 会自动构建和部署项目。
-
-部署完成后，你会获得一个 Vercel 域名（如 `your-project.vercel.app`）。
-
-
-#### 2. 获取 Vercel Token 和 IDs
-
-1. 安装 Vercel CLI：
-   ```bash
-   npm i -g vercel
-   ```
-
-2. 登录 Vercel：
-   ```bash
-   vercel login
-   ```
-
-3. 获取 Token：
-   - 访问 [Vercel Tokens](https://vercel.com/account/tokens)
-   - 创建新的 Token
-
-4. 获取 Org ID 和 Project ID：
-   ```bash
-   vercel link
-   cat .vercel/project.json
-   ```
-
-### 方法三：部署到其他平台
-
-本项目使用无服务器架构，可以部署到任何支持 Node.js 的平台：
-
-- **Netlify**：配置构建命令为 `npm install`，输出目录为 `/`
-- **Railway**：直接导入项目，配置环境变量
-- **Render**：创建 Web Service，配置环境变量
-- **自托管**：使用 `npm start` 启动服务器
 
 ## 项目结构
 
 ```
-cloudflare-monitor-serverless/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml          # GitHub Actions 部署配置
+cdn_monitior/
 ├── node-functions/
 │   └── api/
-│       └── [[default]].js       # 无服务器 API 端点
+│       └── [[default]].js       # API 端点实现
 ├── index.html                   # 前端 UI
 ├── package.json                 # 依赖和脚本
-├── vercel.json                 # Vercel 配置
+├── server.js                    # 服务器入口
+├── Dockerfile                   # Docker 配置
+├── docker-compose.yml           # Docker Compose 配置
 ├── .env.example                # 环境变量模板
 └── README.md                   # 本文件
 ```
@@ -187,10 +168,13 @@ cloudflare-monitor-serverless/
 ## API 端点
 
 - `GET /api/config` - 获取站点配置
-- `GET /api/analytics?period=1day&platform=cloudflare` - 获取分析数据
-  - Platform 选项：`cloudflare`, `edgeone`
-  - Period 选项：`1day`, `3days`, `7days`, `30days`
+- `GET /api/zones` - 获取可用的区域
+- `GET /api/analytics` - 获取分析数据
+- `GET /api/traffic` - 获取流量数据
 - `GET /api/health` - 健康检查
+- `GET /pages/build-count` - 获取构建统计
+- `GET /pages/cloud-function-requests` - 获取云函数请求数据
+- `GET /pages/cloud-function-monthly-stats` - 获取云函数月度统计
 
 ## 环境变量说明
 
