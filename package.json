@@ -14,10 +14,5 @@
     "express": "^4.19.2",
     "tencentcloud-sdk-nodejs": "^4.0.924",
     "tencentcloud-sdk-nodejs-teo": "^4.1.172"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.23",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18"
   }
 }
