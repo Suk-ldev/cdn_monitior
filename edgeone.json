@@ -1,6 +1,0 @@
-{
-  "buildCommand": "",
-  "outputDirectory": "public",
-  "installCommand": "npm install --omit=dev",
-  "nodeVersion": "20"
-}
