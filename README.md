@@ -56,26 +56,106 @@ npm run mock   # http://localhost:3210，全部上游接口用假数据
 
 ## 部署
 
-同一套 `src/` 代码有四个入口，选一个即可。
+这个项目不需要前端构建步骤，`public/` 目录就是最终静态文件。后端 API 由不同平台的函数入口加载同一个 `src/app.js`。
 
-### EdgeOne Pages（推荐）
+### EdgeOne Pages 部署教程
 
-仓库已经是 EdgeOne Pages 的目录约定，前端无需编译：
+EdgeOne Pages 推荐按下面的方式创建项目：
 
-1. EdgeOne Pages 控制台 → 新建项目 → 关联本仓库
-2. 框架选「Other」，**根目录保持仓库根目录**，构建命令填 `npm install --omit=dev`（或留空，使用平台的依赖安装步骤），**输出目录填 `public`**
-3. 在项目的「环境变量」里填上表里的变量
-4. 部署
+1. 打开 EdgeOne Pages 控制台，选择「新建项目」并关联这个仓库。
+2. 框架选择「Other」或「其他框架」。
+3. 项目根目录保持仓库根目录，不要改成 `public`。
+4. 安装命令填写 `npm install --omit=dev`。
+5. 构建命令留空；如果控制台必填，可以填一个不会改动文件的命令，例如 `node -e "console.log('no build step')"`。
+6. 输出目录填写 `public`。
+7. Node.js 版本选择 20 或更高版本；仓库里的 `edgeone.json` 已指定 `20.18.0`。
+8. 在「环境变量」里填入你要启用的平台凭证。
+9. 保存并部署 `master` 分支。
 
-前端由 Pages 静态托管 `public/`，接口由仓库根目录下的 `cloud-functions/api/[[default]].js` 承载，映射到 `/api/*`。`public` 只是静态输出目录，不是项目根目录；否则平台找不到旁边的 `cloud-functions/`。
+EdgeOne 的字段可以按这个表核对：
 
-函数入口必须先声明 `const app = createApp({ serveStatic: false })`，再写 `export default app`。不要改成 `export default createApp(...)`：EdgeOne 构建器按导出标记识别入口，直接导出工厂调用会被跳过，导致 `/api/*` 全部 404。参见 [Node.js 函数入口规则](https://pages.edgeone.ai/document/node-functions)。
+| 控制台字段 | 填写内容 | 说明 |
+| --- | --- | --- |
+| 框架 | Other / 其他框架 | 项目已经按 EdgeOne 目录约定放好静态文件和函数 |
+| 根目录 | 仓库根目录 | 必须能同时看到 `public/`、`cloud-functions/`、`src/` |
+| 安装命令 | `npm install --omit=dev` | 只安装运行依赖 |
+| 构建命令 | 留空 | 本项目没有打包步骤 |
+| 输出目录 | `public` | Pages 静态托管目录 |
+| Node.js | 20+ | `edgeone.json` 使用 `20.18.0` |
+| 部署分支 | `master` | 当前仓库默认分支 |
 
-部署后先访问 `/api/health` 和 `/api/meta`，两者不需要云厂商密钥，应返回 JSON。若仍是平台的 404，检查本次部署是否包含 `/api/*` 云函数、部署分支是否为 `master`、提交是否为最新版本。缺少密钥会在 `meta` 中列出缺失变量，相关数据接口返回配置错误，不会让这两个接口变成 404。
+`public` 只是静态输出目录。项目根目录如果误填成 `public`，EdgeOne 只能看到前端文件，看不到 `cloud-functions/api/[[default]].js` 和 `src/`，所有 `/api/*` 请求都会变成平台 404。
+
+API 入口在 `cloud-functions/api/[[default]].js`。EdgeOne 会把它映射到 `/api/*`，入口文件里必须保留 `export default app` 这种可被平台识别的导出形式：
+
+```js
+import { createApp } from '../../src/app.js';
+
+const app = createApp({ serveStatic: false });
+
+export default app;
+```
+
+不要改成 `export default createApp(...)`。EdgeOne 构建器会按源码里的导出标记识别函数入口，直接导出工厂调用可能被跳过，结果就是前端能打开，但 `/api/health`、`/api/meta` 和其它接口全部 404。参见 [EdgeOne Node.js 函数文档](https://pages.edgeone.ai/document/node-functions)。
+
+### EdgeOne 环境变量
+
+只需要配置你实际使用的平台。比如只看腾讯云 EdgeOne，就填：
+
+```text
+EO_SECRET_ID=你的 SecretId
+EO_SECRET_KEY=你的 SecretKey
+EO_ZONE_IDS=可选，多个站点用英文逗号分隔
+EO_REGION=ap-guangzhou
+SITE_NAME=CDN 流量分析看板
+DEFAULT_PLATFORM=edgeone
+CACHE_TTL=60
+REQUEST_TIMEOUT=20
+DEBUG=false
+```
+
+如果要同时接入阿里云 ESA 或 Cloudflare，再把 README 上方环境变量表里的对应变量补上。未配置完整的平台会在界面里置灰，不会影响已配置平台使用。
+
+### 部署后验证
+
+部署完成后，先访问这两个地址：
+
+```text
+https://你的域名/api/health
+https://你的域名/api/meta
+```
+
+它们不需要云厂商凭证也应该返回 JSON。正常情况下：
+
+- `/api/health` 返回 `status: "ok"`。
+- `/api/meta` 返回站点标题、平台列表、每个平台缺哪些环境变量。
+- 如果某个平台缺密钥，页面会提示配置缺失，但 `/api/health` 和 `/api/meta` 不应该是 404。
+- 如果 `/api/health` 也是 EdgeOne 平台 404，说明函数没有被部署或路由没有注册。
+
+确认基础接口正常后，再打开首页：
+
+```text
+https://你的域名/
+```
+
+如果首页能打开但数据为空，优先看 `/api/meta` 里对应平台是否 `ready`，再检查云厂商密钥和站点 ID。
+
+### EdgeOne 404 排查
+
+遇到 404 按这个顺序查：
+
+1. 控制台项目根目录是否是仓库根目录。不要填 `public`。
+2. 输出目录是否是 `public`。
+3. 安装命令是否是 `npm install --omit=dev`，部署日志里是否安装了 `express`。
+4. 本次部署分支是否是 `master`，提交是否包含 `cloud-functions/api/[[default]].js`。
+5. 函数入口是否仍然是 `const app = ...` 加 `export default app`。
+6. `edgeone.json` 是否包含 `cloudFunctions.nodejs.includeFiles: ["src/**"]`，这样函数能带上 `src/` 代码。
+7. 部署日志里是否出现云函数构建或 `/api/*` 路由。如果没有，说明 EdgeOne 没识别函数入口。
+8. 浏览器请求的是 `/api/health`，不是 `/health`。本地两种路径都能跑，线上建议统一用 `/api/*`。
 
 ### Vercel
 
-`vercel.json` 已配好，直接导入仓库、在 Project Settings 里填环境变量即可。
+`vercel.json` 已配好，导入仓库后在 Project Settings 里填环境变量即可。Vercel 入口是 `api/index.js`。
 
 ### Docker
 
