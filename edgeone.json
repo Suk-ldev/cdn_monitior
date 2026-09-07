@@ -1,0 +1,11 @@
+{
+  "outputDirectory": "public",
+  "installCommand": "npm install",
+  "nodeVersion": "20.18.0",
+  "cloudFunctions": {
+    "nodejs": {
+      "includeFiles": ["src/**"],
+      "maxDuration": 30
+    }
+  }
+}
