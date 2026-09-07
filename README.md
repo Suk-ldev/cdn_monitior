@@ -1,325 +1,202 @@
 # CDN 流量分析看板
 
-一个支持 Cloudflare 和 EdgeOne 的 CDN 流量分析看板，采用 Node.js + Express 架构，可通过 Docker 部署。
+在一个界面里看 **腾讯云 EdgeOne**、**阿里云 ESA（边缘安全加速）** 和 **Cloudflare** 的流量数据。
 
-## 功能特性
+三家厂商的指标在后端被归一化成同一套结构，前端不区分平台；某个平台不支持的指标，对应的卡片和板块会直接隐藏，而不是一直显示"加载中"。
 
-- Node.js + Express 架构
-- 支持 Cloudflare 和 EdgeOne 双平台
-- 实时 CDN 流量数据展示
-- 多语言支持（中文/英文）
-- 深色/浅色主题切换
-- 响应式设计，基于 Tailwind CSS
-- 交互式图表，使用 ECharts
-- 缓存统计和地域分析
-- 时间范围选择（1小时/今日/昨日/3天/7天/14天/31天）
-- 粒度选择（1分钟/5分钟/15分钟/30分钟/1小时/4小时/1天）
+## 特性
+
+- 三平台统一指标模型：流量 / 带宽 / 请求数 / 缓存命中 / 回源 / 安全 / 边缘函数 / TOP 分析
+- 按平台能力自适应渲染，未配置的平台在切换器里置灰并提示缺哪个环境变量
+- 环比（较上一周期）增减、采样率提示、粒度自动降级提示
+- 单个上游接口失败只降级成一条提示，不会让整页空白
+- 深色 / 浅色 / 跟随系统，中英双语，响应式到手机
+- 服务端并发拉取 + TTL 缓存 + 单飞去重，一次刷新只有 3 个前端请求
+- 零第三方 SDK：腾讯 TC3 与阿里 ACS3 签名自行实现并与官方 SDK 做了逐字节校验，依赖只剩 `express`
+- ECharts 本地内置，不依赖 CDN
 
 ## 快速开始
-
-### 1. 克隆项目
 
 ```bash
 git clone https://github.com/Suk-ldev/cdn_monitior.git
 cd cdn_monitior
-```
-
-### 2. 安装依赖
-
-```bash
 npm install
+cp .env.example .env   # 填入你要用的平台凭证
+npm start              # http://localhost:3000
 ```
 
-### 3. 配置环境变量
-
-本项目使用环境变量存储敏感信息，如 API 密钥。请创建一个 `.env` 文件，参考 `.env.example` 的格式，填入你的 API 凭证：
-
-#### Cloudflare 配置
-
-- `CF_TOKENS`：Cloudflare API Token，多个 Token 用逗号分隔
-- `CF_ZONES`：Zone ID，多个 ID 用逗号分隔
-- `CF_DOMAINS`：域名，多个域名用逗号分隔（可选）
-
-#### EdgeOne 配置
-
-- `EO_SECRET_ID`：EdgeOne Secret ID
-- `EO_SECRET_KEY`：EdgeOne Secret Key
-
-#### 通用配置
-
-- `SITE_NAME`：站点标题（可选）
-- `SITE_ICON`：Cloudflare 图标 URL（可选）
-- `EO_ICON`：EdgeOne 图标 URL（可选）
-- `DEBUG`：调试模式，设置为 `true` 启用（可选）
-
-### 4. 获取 Cloudflare API Token
-
-1. 访问 [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)
-2. 创建新的 API Token，需要以下权限：
-   - Account - Analytics - Read
-   - Zone - Zone - Read
-   - Zone - Analytics - Read
-3. 在 Token 权限中包含你的 Zone ID
-
-### 5. 获取 Cloudflare Zone ID
-
-1. 访问你的 Cloudflare Dashboard
-2. 选择你的域名
-3. Zone ID 显示在右侧边栏
-
-### 6. 获取 EdgeOne API 密钥
-
-1. 访问 [腾讯云访问管理控制台](https://console.cloud.tencent.com/cam/capi)
-2. 创建新的 API 密钥
-3. 记录 SecretId 和 SecretKey
-
-### 7. 本地开发
-
-启动开发服务器：
+想先看看界面长什么样、手头没有凭证：
 
 ```bash
-npm start
+npm run mock   # http://localhost:3210，全部上游接口用假数据
 ```
 
-在浏览器中打开 `http://localhost:3000`。
+## 环境变量
 
-## 部署教程
+只配置你实际使用的平台即可，其余平台会自动置灰。
 
-### 方法一：使用 Docker 部署
+| 变量 | 平台 | 说明 |
+| --- | --- | --- |
+| `EO_SECRET_ID` / `EO_SECRET_KEY` | EdgeOne | [腾讯云访问管理](https://console.cloud.tencent.com/cam/capi) 创建的 API 密钥 |
+| `EO_ZONE_IDS` | EdgeOne | 可选，逗号分隔；填了就跳过 `DescribeZones` |
+| `EO_REGION` | EdgeOne | 可选，默认 `ap-guangzhou` |
+| `ESA_ACCESS_KEY_ID` / `ESA_ACCESS_KEY_SECRET` | 阿里云 ESA | [RAM 访问控制](https://ram.console.aliyun.com/manage/ak)，建议只读子账号 |
+| `ESA_SITE_IDS` | 阿里云 ESA | 可选，逗号分隔；填了就跳过 `ListSites` |
+| `ESA_REGION` | 阿里云 ESA | 可选，默认 `cn-hangzhou` |
+| `CF_TOKENS` | Cloudflare | API Token，需要 `Zone:Read` + `Zone Analytics:Read` |
+| `CF_ZONES` | Cloudflare | Zone ID，逗号分隔 |
+| `CF_DOMAINS` | Cloudflare | 可选，与 `CF_ZONES` 一一对应的展示名 |
+| `SITE_NAME` | 通用 | 页面标题 |
+| `DEFAULT_PLATFORM` | 通用 | `edgeone` / `esa` / `cloudflare` |
+| `CACHE_TTL` | 通用 | 服务端缓存秒数，默认 60，设 0 关闭 |
+| `REQUEST_TIMEOUT` | 通用 | 单个上游请求超时秒数，默认 20 |
+| `DEBUG` | 通用 | `true` 时打印上游错误堆栈 |
 
-#### 1. 构建 Docker 镜像
+阿里云权限最小化：给子账号挂 `AliyunESAReadOnlyAccess` 即可，本项目只调用 `ListSites`、`DescribeSiteTimeSeriesData`、`DescribeSiteTopData`、`DescribeSiteWafTimeSeriesData`。
 
-在项目根目录执行：
+## 部署
+
+同一套 `src/` 代码有四个入口，选一个即可。
+
+### EdgeOne Pages（推荐）
+
+仓库已经是 EdgeOne Pages 的目录约定，无需构建：
+
+1. EdgeOne Pages 控制台 → 新建项目 → 关联本仓库
+2. 构建命令留空，**输出目录填 `public`**
+3. 在项目的「环境变量」里填上表里的变量
+4. 部署
+
+前端由 Pages 静态托管 `public/`，接口由 `node-functions/api/[[default]].js` 承载，映射到 `/api/*`。
+
+> EdgeOne 较新的项目模板把函数目录改名成了 `cloud-functions/`。如果你的项目用的是新约定，把目录改名即可：
+> `git mv node-functions cloud-functions`（文件内容不用动）。
+
+### Vercel
+
+`vercel.json` 已配好，直接导入仓库、在 Project Settings 里填环境变量即可。
+
+### Docker
 
 ```bash
-docker build -t cdn-monitor .
+cp .env.example .env
+docker compose up -d      # http://localhost:3000
 ```
 
-#### 2. 运行 Docker 容器
+### 裸 Node
 
 ```bash
-docker run -d \
-  --name cdn-monitor \
-  -p 3000:3000 \
-  -e CF_TOKENS=your_cloudflare_api_token_here \
-  -e CF_ZONES=your_zone_id_here \
-  -e CF_DOMAINS=example.com \
-  -e EO_SECRET_ID=your_edgeone_secret_id_here \
-  -e EO_SECRET_KEY=your_edgeone_secret_key_here \
-  -e SITE_NAME=CDN站点流量分析 \
-  cdn-monitor
+npm install --omit=dev
+node server.js            # PORT 可覆盖，默认 3000
 ```
 
-#### 3. 使用 Docker Compose（推荐）
+## 接口
 
-项目已经包含了 `docker-compose.yml` 文件，你可以直接使用：
+所有接口都挂在 `/api` 下（EdgeOne Pages 会去掉这层前缀，应用同时挂载了两种路径，两边都能跑）。
 
-1. 修改 `docker-compose.yml` 文件，添加你的环境变量
-2. 运行：
+| 接口 | 说明 |
+| --- | --- |
+| `GET /api/meta` | 站点名、各平台是否就绪、平台能力、可选时间范围与粒度 |
+| `GET /api/sites?platform=` | 站点/Zone 列表 |
+| `GET /api/overview?platform=&range=&interval=&siteId=&compare=1` | KPI + 时序数据 + 缓存命中率 |
+| `GET /api/top?platform=&metric=traffic\|requests&dimensions=&limit=` | TOP 分析 |
+| `GET /api/pages?platform=edgeone` | EdgeOne Pages 用量（仅 EdgeOne） |
+| `GET /api/health` | 健康检查与配置自检 |
 
-```bash
-docker-compose up -d
+时间参数二选一：`range`（`1h` / `6h` / `today` / `yesterday` / `3d` / `7d` / `14d` / `31d`，配合 `offset` 传浏览器时区偏移分钟数），或直接给 `start` / `end` 的 ISO 时间。
+
+`interval` 可填 `auto` / `min` / `5min` / `hour` / `day`；超出该跨度上限时会自动升粒度，并在响应里用 `range.intervalAdjusted` 标记。
+
+### 统一指标
+
+响应里的 `series` 用的是与厂商无关的指标名：
+
+```
+traffic.total|in|out        bandwidth.total|in|out       requests.total
+cache.traffic.hit           cache.requests.hit
+origin.traffic.out|in       origin.bandwidth.out|in      origin.requests
+security.blocked            perf.responseTime            perf.firstByteTime
+functions.requests          functions.cpuTime
 ```
 
-### 方法二：自托管部署
+每条序列形如：
 
-1. 在服务器上安装 Node.js 18 或更高版本
-2. 克隆项目到服务器
-3. 安装依赖：`npm install --production`
-4. 配置环境变量
-5. 启动服务器：`npm start`
-
-### 方法三：使用 Nginx 作为反向代理（可选）
-
-如果你需要使用域名访问，可以配置 Nginx 作为反向代理：
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
+```json
+{
+  "metric": "traffic.total",
+  "unit": "bytes",
+  "agg": "sum",
+  "points": [[1767225600000, 2439157866]],
+  "summary": { "sum": 0, "max": 0, "avg": 0, "last": 0 }
 }
 ```
 
-## 项目结构
+### 各平台覆盖情况
+
+| 指标 | EdgeOne | ESA | Cloudflare |
+| --- | :---: | :---: | :---: |
+| 流量 / 请求数 | ✅ | ✅ | ✅ |
+| 带宽 | ✅ 原生 | ⚠️ 由流量推算 | ⚠️ 由流量推算 |
+| 缓存命中 | ✅ | ✅ | ✅ |
+| 回源 | ✅ | ❌ | ❌ |
+| 安全命中 | ✅ CC/ACL | ✅ WAF | ⚠️ threats |
+| 平均耗时 / 首字节 | ✅ | ❌ | ❌ |
+| 边缘函数 | ✅ | ❌ | ❌ |
+| TOP 维度数 | 12 | 14 | 4 |
+| Pages 用量 | ✅ | ❌ | ❌ |
+
+ESA 没有独立的带宽字段，带宽由 `流量 × 8 ÷ 粒度秒数` 推算，界面上标为峰值；ESA 也不提供回源流量入口，官方建议用缓存状态 `miss` 间接判断。
+
+## 上游接口
+
+| 平台 | 使用的接口 |
+| --- | --- |
+| EdgeOne | `DescribeZones`、`DescribeTimingL7AnalysisData`、`DescribeTimingL7CacheData`、`DescribeTimingL7OriginPullData`、`DescribeTopL7AnalysisData`、`DescribeWebProtectionData`、`DescribeTimingFunctionAnalysisData`、`DescribePagesResources` |
+| 阿里云 ESA | `ListSites`、`DescribeSiteTimeSeriesData`、`DescribeSiteTopData`、`DescribeSiteWafTimeSeriesData` |
+| Cloudflare | GraphQL `httpRequests1hGroups` / `httpRequests1dGroups`，细粒度时优先 `httpRequestsAdaptiveGroups` 并在失败时回落 |
+
+## 目录结构
 
 ```
-cdn_monitior/
-├── node-functions/
-│   └── api/
-│       └── [[default]].js       # API 端点实现
-├── index.html                   # 前端 UI
-├── package.json                 # 依赖和脚本
-├── server.js                    # 服务器入口
-├── Dockerfile                   # Docker 配置
-├── docker-compose.yml           # Docker Compose 配置
-├── .env.example                # 环境变量模板
-└── README.md                   # 本文件
+src/
+  app.js                 Express 应用装配（路由同时挂在 / 和 /api）
+  config.js              环境变量解析与平台就绪状态
+  routes/api.js          HTTP 层
+  providers/
+    metrics.js           统一指标词表与序列工具
+    edgeone.js           腾讯云 EdgeOne
+    esa.js               阿里云 ESA
+    cloudflare.js        Cloudflare GraphQL
+  lib/
+    sign/tencent.js      TC3-HMAC-SHA256
+    sign/aliyun.js       ACS3-HMAC-SHA256
+    http.js              超时 / 重试 / 有界并发
+    cache.js             TTL 缓存 + 单飞
+    time.js              时间范围与粒度
+public/
+  index.html
+  assets/                app.js / api.js / charts.js / ui.js / format.js / i18n.js / app.css
+  vendor/                echarts.min.js + world.js
+node-functions/api/[[default]].js   EdgeOne Pages 入口
+api/index.js                        Vercel 入口
+server.js                           裸 Node 入口
+test/                               node:test 用例
+scripts/mock-server.mjs             假数据服务，无凭证也能看界面
 ```
 
-## API 端点
-
-- `GET /api/config` - 获取站点配置
-- `GET /api/zones` - 获取可用的区域
-- `GET /api/analytics` - 获取分析数据
-- `GET /api/traffic` - 获取流量数据
-- `GET /api/health` - 健康检查
-- `GET /pages/build-count` - 获取构建统计
-- `GET /pages/cloud-function-requests` - 获取云函数请求数据
-- `GET /pages/cloud-function-monthly-stats` - 获取云函数月度统计
-
-## 环境变量说明
-
-| 变量名 | 说明 | 必需 | 平台 |
-|--------|------|------|------|
-| `CF_TOKENS` | Cloudflare API Token | 是（Cloudflare） | Cloudflare |
-| `CF_ZONES` | Zone ID，逗号分隔 | 是（Cloudflare） | Cloudflare |
-| `CF_DOMAINS` | 域名，逗号分隔 | 否 | Cloudflare |
-| `EO_SECRET_ID` | EdgeOne Secret ID | 是（EdgeOne） | EdgeOne |
-| `EO_SECRET_KEY` | EdgeOne Secret Key | 是（EdgeOne） | EdgeOne |
-| `SITE_NAME` | 站点标题 | 否 | 通用 |
-| `SITE_ICON` | Cloudflare 图标 URL | 否 | Cloudflare |
-| `EO_ICON` | EdgeOne 图标 URL | 否 | EdgeOne |
-| `DEBUG` | 调试模式 | 否 | 通用 |
-
-## 功能详情
-
-### 时间范围
-
-- **1 小时**：过去 1 小时的每分钟数据
-- **今日**：今天的每小时数据
-- **昨日**：昨天的每小时数据
-- **3 天**：过去 3 天的每小时数据
-- **7 天**：过去 7 天的每小时数据
-- **14 天**：过去 14 天的每 4 小时数据
-- **31 天**：过去 31 天的每天数据
-
-### 指标说明
-
-- 总请求数
-- 总流量（带宽）
-- 总拦截威胁数
-- 缓存命中率（请求数和带宽）
-- 地域统计（前 5 个国家/地区）
-- 平均响应时间
-- 平均首字节响应时间
-
-### 图表展示
-
-- 请求趋势图
-- 流量趋势图
-- 威胁拦截趋势图
-
-### 平台切换
-
-- 支持在 Cloudflare 和 EdgeOne 之间切换
-- 默认平台设置为 EdgeOne
-- 自动适配不同平台的 API 数据格式
-- 统一的 UI 界面展示
-
-## 故障排除
-
-### 数据无法加载
-
-1. 检查 API Token 是否有正确的权限
-2. 验证 Zone ID 或 Secret ID/Key 是否正确
-3. 检查浏览器控制台是否有错误
-4. 确保环境变量已正确设置
-
-### Cloudflare API 错误
-
-1. 验证 Cloudflare API Token 是否有效且未过期
-2. 检查 Token 是否有访问指定 Zone 的权限
-3. 确保 Token 有 Analytics:Read 权限
-
-### EdgeOne API 错误
-
-1. 验证 EdgeOne Secret ID 和 Secret Key 是否正确
-2. 检查密钥是否有足够的权限
-3. 确保密钥未过期
-
-### 平台切换问题
-
-1. 检查两个平台的 API 凭证是否都配置正确
-2. 查看浏览器控制台的网络请求
-3. 确认后端 API 端点正常工作
-
-## 开发指南
-
-### 本地开发
+## 测试
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
+npm test
 ```
 
-### 代码结构
-
-- `index.html`：前端页面，包含所有 UI 和交互逻辑
-- `node-functions/api/[[default]].js`：后端 API，处理数据请求
-- `vercel.json`：Vercel 部署配置
-
-### 添加新功能
-
-1. 在 `index.html` 中添加 UI 元素
-2. 在 `node-functions/api/[[default]].js` 中添加 API 端点
-3. 更新环境变量配置
-4. 测试并提交代码
+包含签名算法与官方 SDK 的比对向量、三个 provider 的解析用例，以及"上游报错时降级成提示"的回归用例。
 
 ## 许可证
 
-MIT License
+MIT
 
 ## 致谢
 
-基于 [Cloudflare Monitor](https://github.com/Geekertao/Cloudflare-monitor) 项目开发
-
-## 相关链接
-
-- [CDN 监控仓库](https://github.com/Suk-ldev/cdn_monitior) - 本项目
-- [EdgeOne 监控仓库](https://github.com/afoim/eo_monitor/)
-- [Cloudflare 监控仓库](https://github.com/Geekertao/cloudflare-monitor) - 同文件夹下的 Cloudflare 监控项目
-- [Cloudflare API 文档](https://developers.cloudflare.com/api/)
-- [EdgeOne API 文档](https://cloud.tencent.com/document/product/1552)
-- [Vercel 文档](https://vercel.com/docs)
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 更新日志
-
-### v2.1.0
-- 默认平台设置为 EdgeOne
-- 时间范围默认值修改为"今日"
-- 删除时间范围中的30分钟、6小时和自定义选项
-- 粒度选择器删除"自动"选项，默认设为"1分钟"
-- 删除站点选择功能，使用默认站点
-- 删除请求与性能中的总请求数部分
-- 修复 EdgeOne 回源分析数据不返回的问题
-- 优化环境变量配置，敏感信息通过环境变量管理
-
-### v2.0.0
-- 添加 EdgeOne 平台支持
-- 添加平台切换功能
-- 优化 UI 界面
-- 添加中文本地化
-
-### v1.0.0
-- 初始版本
-- 支持 Cloudflare 平台
-- 基础流量分析功能
+- [Geekertao/cloudflare-monitor](https://github.com/Geekertao/cloudflare-monitor)
+- [afoim/eo_monitor](https://github.com/afoim/eo_monitor)

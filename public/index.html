@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>CDN 流量分析看板</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6fed'/%3E%3Cpath d='M7 21l5-7 4 4 4-7 5 10' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/app.css">
+<!-- ECharts is vendored so the dashboard never depends on a third-party CDN. -->
+<script src="/vendor/echarts.min.js" defer></script>
+<script src="/vendor/world.js" defer></script>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-7 4 4 4-7 5 10"/></svg>
+      </span>
+      <div>
+        <h1 class="brand__title" id="site-title">CDN 流量分析看板</h1>
+        <p class="brand__sub" id="site-subtitle">多云 CDN 流量分析</p>
+      </div>
+    </div>
+
+    <div class="segmented" id="platform-switch" role="group" aria-label="平台"></div>
+
+    <span class="topbar__spacer"></span>
+
+    <div class="controls">
+      <label class="field">
+        <span class="visually-hidden">站点</span>
+        <select class="select" id="site-select"></select>
+      </label>
+      <label class="field">
+        <span class="visually-hidden">时间范围</span>
+        <select class="select" id="range-select"></select>
+      </label>
+      <label class="field">
+        <span class="visually-hidden">粒度</span>
+        <select class="select" id="interval-select"></select>
+      </label>
+
+      <button class="btn btn--icon" id="refresh-btn" type="button" title="刷新">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button class="btn btn--icon" id="auto-btn" type="button" aria-pressed="false" title="自动刷新">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </button>
+      <button class="btn btn--icon" id="theme-btn" type="button" title="主题">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+      </button>
+      <button class="btn btn--icon" id="lang-btn" type="button" title="语言">EN</button>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+  <nav class="sidenav" id="sidenav" aria-label="章节导航"></nav>
+  <div class="content">
+    <div id="notices" class="grid"></div>
+    <div class="content" id="content"></div>
+  </div>
+</main>
+
+<footer class="footer">
+  <span id="updated-at"></span>
+  <span>
+    <a href="https://github.com/Suk-ldev/cdn_monitior" target="_blank" rel="noreferrer noopener">cdn_monitior</a>
+    · Cloudflare / EdgeOne / 阿里云 ESA
+  </span>
+</footer>
+
+<script type="module" src="/assets/app.js"></script>
+</body>
+</html>
