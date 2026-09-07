@@ -60,17 +60,18 @@ npm run mock   # http://localhost:3210，全部上游接口用假数据
 
 ### EdgeOne Pages（推荐）
 
-仓库已经是 EdgeOne Pages 的目录约定，无需构建：
+仓库已经是 EdgeOne Pages 的目录约定，前端无需编译：
 
 1. EdgeOne Pages 控制台 → 新建项目 → 关联本仓库
-2. 构建命令留空，**输出目录填 `public`**
+2. 框架选「Other」，**根目录保持仓库根目录**，构建命令填 `npm install --omit=dev`（或留空，使用平台的依赖安装步骤），**输出目录填 `public`**
 3. 在项目的「环境变量」里填上表里的变量
 4. 部署
 
-前端由 Pages 静态托管 `public/`，接口由 `node-functions/api/[[default]].js` 承载，映射到 `/api/*`。
+前端由 Pages 静态托管 `public/`，接口由仓库根目录下的 `cloud-functions/api/[[default]].js` 承载，映射到 `/api/*`。`public` 只是静态输出目录，不是项目根目录；否则平台找不到旁边的 `cloud-functions/`。
 
-> EdgeOne 较新的项目模板把函数目录改名成了 `cloud-functions/`。如果你的项目用的是新约定，把目录改名即可：
-> `git mv node-functions cloud-functions`（文件内容不用动）。
+函数入口必须先声明 `const app = createApp({ serveStatic: false })`，再写 `export default app`。不要改成 `export default createApp(...)`：EdgeOne 构建器按导出标记识别入口，直接导出工厂调用会被跳过，导致 `/api/*` 全部 404。参见 [Node.js 函数入口规则](https://pages.edgeone.ai/document/node-functions)。
+
+部署后先访问 `/api/health` 和 `/api/meta`，两者不需要云厂商密钥，应返回 JSON。若仍是平台的 404，检查本次部署是否包含 `/api/*` 云函数、部署分支是否为 `master`、提交是否为最新版本。缺少密钥会在 `meta` 中列出缺失变量，相关数据接口返回配置错误，不会让这两个接口变成 404。
 
 ### Vercel
 
@@ -177,7 +178,7 @@ public/
   index.html
   assets/                app.js / api.js / charts.js / ui.js / format.js / i18n.js / app.css
   vendor/                echarts.min.js + world.js
-node-functions/api/[[default]].js   EdgeOne Pages 入口
+cloud-functions/api/[[default]].js  EdgeOne Pages 入口
 api/index.js                        Vercel 入口
 server.js                           裸 Node 入口
 test/                               node:test 用例

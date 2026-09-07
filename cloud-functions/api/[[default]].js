@@ -1,5 +1,7 @@
-// EdgeOne Pages 函数入口。平台会剥掉 `/api` 前缀后直接调用导出的 Express 实例，
-// 这里不需要 listen。src/app.js 同时把路由挂在 `/` 和 `/api`，两种调用方式都能命中。
+// EdgeOne 按源码中的导出识别函数入口，必须保留 `export default app`。
+// 直接导出 createApp(...) 会被当成辅助模块跳过，不生成 /api/* 路由。
 import { createApp } from '../../src/app.js';
 
-export default createApp({ serveStatic: false });
+const app = createApp({ serveStatic: false });
+
+export default app;

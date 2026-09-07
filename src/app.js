@@ -28,7 +28,7 @@ export function createApp({ serveStatic = true } = {}) {
   });
 
   const router = createApiRouter(ctx);
-  // EdgeOne Pages strips the `node-functions/api` prefix before invoking the
+  // EdgeOne Pages strips the `cloud-functions/api` prefix before invoking the
   // function, while Node/Vercel/Docker keep the full `/api/...` path.
   app.use('/api', router);
   app.use('/', router);
